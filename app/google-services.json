@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "296755673800",
+    "project_id": "projectalphaemail-a9692",
+    "storage_bucket": "projectalphaemail-a9692.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:296755673800:android:9b0b0a3242eb177b4e03fd",
+        "android_client_info": {
+          "package_name": "com.example.alfaproject"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCvhGEGwb_Z2LT-k9PM2_02qm91_EyYMwc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
