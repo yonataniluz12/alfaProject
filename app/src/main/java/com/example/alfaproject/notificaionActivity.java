@@ -32,5 +32,13 @@ public class notificaionActivity extends AppCompatActivity {
 
     
     public void TextNotiTime(View view) {
+        String text = eTNOti.getText().toString();
+        try {
+            Thread.sleep(30000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        NotificationHelper.showNotificationBtnTime(this,text);
+        
     }
 }

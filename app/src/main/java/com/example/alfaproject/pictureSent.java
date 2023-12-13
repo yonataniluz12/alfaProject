@@ -1,6 +1,7 @@
 package com.example.alfaproject;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -24,63 +25,41 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.storage.FileDownloadTask;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 
 public class pictureSent extends AppCompatActivity {
-    public static FirebaseStorage storage = FirebaseStorage.getInstance();
-    public static StorageReference storageRef = storage.getReference();
 
-    private static final int REQUEST_READ_EXTERNAL_STORAGE_PERMISSION = 3;
     private static final int REQUEST_PICK_IMAGE = 1;
-    static final int REQUEST_CAMERA_PERMISSION = 2;
 
+    public StorageReference imagesRef,storageRef;
     ImageView iV;
     Uri imageUri;
-    boolean isLegal;
-    private int REQUEST_IMAGE_CAPTURE;
 
-    @SuppressLint("MissingInflatedId")
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_picture_sent);
 
-        iV = findViewById(R.id.iV);
-
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions( this, new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_READ_EXTERNAL_STORAGE_PERMISSION);
-        }
+        iV = (ImageView) findViewById(R.id.iV);
+        storageRef = FirebaseStorage.getInstance().getReference();
     }
 
 
 
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data_back) {
-        super.onActivityResult(requestCode, resultCode, data_back);
-        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == Activity.RESULT_OK) {
-            if (data_back != null) {
-                imageUri =data_back.getData();
-                isLegal = true;
-            }
-            else {
-                isLegal = false;
-            }
-        }
-    }
+
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_CAMERA_PERMISSION) {
-            if (!(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show();
-            }
-        }
-        if (requestCode == REQUEST_READ_EXTERNAL_STORAGE_PERMISSION) {
+        if (requestCode == REQUEST_PICK_IMAGE) {
             if (!(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                 Toast.makeText(this, "Gallery permission denied", Toast.LENGTH_SHORT).show();
             }
@@ -98,44 +77,44 @@ public class pictureSent extends AppCompatActivity {
     }
 
     public void showImage(View view) {
-        if(isLegal){
-            iV.setImageURI(imageUri);
-        }
-        else {Toast.makeText(pictureSent.this,"you mast select image",Toast.LENGTH_LONG).show();}
-    }
-
-    public void uploadImage(View view) {
-        final ProgressDialog pd = ProgressDialog.show(this, "Image download", "downloading...", true);
-        StorageReference imagesRef = storageRef.child("images/" + "aaa" + ".jpg");
-
-        final File localFile;
-        try {
-            localFile = File.createTempFile("images","jpg");
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        imagesRef.getFile(localFile).addOnSuccessListener(
-                new OnSuccessListener<FileDownloadTask.TaskSnapshot>() {
-            @Override
-            public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot) {
-                pd.dismiss();
-                Toast.makeText(pictureSent.this, "Image download success", Toast.LENGTH_LONG).show();
-                String filePath = localFile.getPath();
-
-                Bitmap bitmap = BitmapFactory.decodeFile(filePath);
+        if(imagesRef != null){
+            imagesRef.getBytes(1920*1080).addOnSuccessListener(bytes -> {
+                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes,0,bytes.length);
                 iV.setImageBitmap(bitmap);
-            }
-        }).addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull Exception exception) {
-                pd.dismiss();
-                Toast.makeText(pictureSent.this, "Image download failed", Toast.LENGTH_LONG).show();
-            }
-        });
+            }).addOnFailureListener(e -> {
+                Toast.makeText(pictureSent.this,e.getMessage().toString(),Toast.LENGTH_LONG).show();
+            })
+            ;
+        }
+        else {Toast.makeText(pictureSent.this,"the image not upload",Toast.LENGTH_LONG).show();}
+
     }
-
-
-
+    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data_back) {
+        super.onActivityResult(requestCode, resultCode, data_back);
+        if(requestCode == REQUEST_PICK_IMAGE && resultCode == Activity.RESULT_OK) {
+            if (data_back != null) {
+                try {
+                    Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), imageUri);
+                    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
+                    byte[] imagedata = byteArrayOutputStream.toByteArray();
+                    imagesRef = storageRef.child("image/" + System.currentTimeMillis()+ "jpt");
+                    UploadTask uploadTask = imagesRef.putBytes(imagedata);
+                    uploadTask.addOnSuccessListener(taskSnapshot -> {
+                        Toast.makeText(pictureSent.this, "image upload success fully", Toast.LENGTH_LONG).show();
+                    }).addOnFailureListener(e -> {
+                        Toast.makeText(pictureSent.this, "Failed upload image", Toast.LENGTH_LONG).show();
+                    });
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    Toast.makeText(pictureSent.this, "error", Toast.LENGTH_LONG).show();
+                }
+            }
+        }
+        else{
+            Toast.makeText(pictureSent.this, "select image", Toast.LENGTH_LONG).show();
+        }
+    }
     public void next2(View view) {
         startActivity(new Intent(pictureSent.this,fdbd.class));
     }
