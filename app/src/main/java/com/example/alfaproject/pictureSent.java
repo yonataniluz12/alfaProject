@@ -1,11 +1,15 @@
 package com.example.alfaproject;
 
+import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import android.Manifest;
+import android.Manifest.permission;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ProgressDialog;
@@ -34,26 +38,19 @@ import java.util.concurrent.atomic.AtomicMarkableReference;
 
 public class pictureSent extends AppCompatActivity {
 
-    private static final int REQUEST_PICK_IMAGE = 1;
-
+    private static final int REQUEST_PICK_IMAGE = 2;
     public StorageReference imagesRef,storageRef;
     ImageView iV;
     Uri imageUri;
-
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_picture_sent);
-
         iV = (ImageView) findViewById(R.id.iV);
         storageRef = FirebaseStorage.getInstance().getReference();
     }
-
-
-
-
 
 
     @Override
@@ -67,13 +64,15 @@ public class pictureSent extends AppCompatActivity {
     }
 
     public void select_item(View view) {
-        Intent intent = new Intent();
-        intent.setAction(Intent.ACTION_PICK);
-        intent.setData(MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-        startActivityForResult(intent, REQUEST_PICK_IMAGE);
-
-
-
+        if(ContextCompat.checkSelfPermission(this, READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
+            ActivityCompat.requestPermissions(this,new String[]{READ_EXTERNAL_STORAGE},REQUEST_PICK_IMAGE);
+        }
+        else {
+            Intent intent = new Intent();
+            intent.setAction(Intent.ACTION_PICK);
+            intent.setData(MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+            startActivityForResult(intent, REQUEST_PICK_IMAGE);
+        }
     }
 
     public void showImage(View view) {
@@ -93,19 +92,21 @@ public class pictureSent extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data_back);
         if(requestCode == REQUEST_PICK_IMAGE && resultCode == Activity.RESULT_OK) {
             if (data_back != null) {
+                imageUri = data_back.getData();
                 try {
                     Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), imageUri);
                     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
                     byte[] imagedata = byteArrayOutputStream.toByteArray();
-                    imagesRef = storageRef.child("image/" + System.currentTimeMillis()+ "jpt");
+                    imagesRef = storageRef.child("image/" + System.currentTimeMillis()+ ".jpg");
                     UploadTask uploadTask = imagesRef.putBytes(imagedata);
                     uploadTask.addOnSuccessListener(taskSnapshot -> {
                         Toast.makeText(pictureSent.this, "image upload success fully", Toast.LENGTH_LONG).show();
                     }).addOnFailureListener(e -> {
                         Toast.makeText(pictureSent.this, "Failed upload image", Toast.LENGTH_LONG).show();
                     });
-                } catch (IOException e) {
+                }
+                catch (IOException e) {
                     e.printStackTrace();
                     Toast.makeText(pictureSent.this, "error", Toast.LENGTH_LONG).show();
                 }

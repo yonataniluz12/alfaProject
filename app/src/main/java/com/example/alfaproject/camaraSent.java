@@ -2,6 +2,8 @@ package com.example.alfaproject;
 
 
 
+import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -38,11 +40,8 @@ public class camaraSent extends AppCompatActivity {
 
     private static final int REQUEST_CAMERA_PERMISSION = 50;
 
-
     ImageView iV;
     Uri imageUri;
-
-    @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -64,15 +63,17 @@ public class camaraSent extends AppCompatActivity {
         if (requestCode == REQUEST_CAMERA_PERMISSION && resultCode == Activity.RESULT_OK) {
             if(data_back != null)
             {
+                imageUri = data_back.getData();
                 try {
                     Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(),imageUri);
                     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
                     byte[] imagedata = byteArrayOutputStream.toByteArray();
-                    imagesRef = storageRef.child("image/" +System.currentTimeMillis()+ "jpt");
+                    imagesRef = storageRef.child("image/"+ System.currentTimeMillis()+ ".jpg");
                     UploadTask uploadTask = imagesRef.putBytes(imagedata);
                     uploadTask.addOnSuccessListener(taskSnapshot -> {
                         Toast.makeText(camaraSent.this, "image upload success fully", Toast.LENGTH_LONG).show();
+
                     }).addOnFailureListener(e -> {
                         Toast.makeText(camaraSent.this, "Failed upload image", Toast.LENGTH_LONG).show();
                     });
@@ -93,10 +94,15 @@ public class camaraSent extends AppCompatActivity {
 
 
     public void goCamara(View view) {
-        Intent takePicIntent = new Intent();
-        takePicIntent.setAction(MediaStore.ACTION_IMAGE_CAPTURE);
-        if (takePicIntent.resolveActivity(getPackageManager()) != null) {
-            startActivityForResult(takePicIntent, REQUEST_CAMERA_PERMISSION);
+        if(ContextCompat.checkSelfPermission(this, READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
+            ActivityCompat.requestPermissions(this,new String[]{READ_EXTERNAL_STORAGE},REQUEST_CAMERA_PERMISSION);
+        }
+        else{
+            Intent takePicIntent = new Intent();
+            takePicIntent.setAction(MediaStore.ACTION_IMAGE_CAPTURE);
+            if (takePicIntent.resolveActivity(getPackageManager()) != null) {
+                startActivityForResult(takePicIntent, REQUEST_CAMERA_PERMISSION);
+            }
         }
     }
 
@@ -112,10 +118,8 @@ public class camaraSent extends AppCompatActivity {
                 iV.setImageBitmap(bitmap);
             }).addOnFailureListener(e -> {
                 Toast.makeText(camaraSent.this,e.getMessage().toString(),Toast.LENGTH_LONG).show();
-            })
-            ;
+            });
         }
         else {Toast.makeText(camaraSent.this,"the image not upload",Toast.LENGTH_LONG).show();}
-
     }
 }
